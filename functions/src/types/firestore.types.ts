@@ -7,7 +7,7 @@ export interface YClientsUserMapping {
   clientId: number;
   phone: string;
   userToken: string;
-  staffId: number;
+  staffId: number | null;
 }
 
 export interface YClientsChatMapping {

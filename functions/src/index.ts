@@ -64,19 +64,49 @@ export const health = functions.https.onRequest((request, response) => {
 });
 
 /**
+ * Helper to set CORS headers and handle OPTIONS requests
+ */
+function setCorsHeaders(response: functions.Response): void {
+  response.set("Access-Control-Allow-Origin", "*");
+  response.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  response.set("Access-Control-Allow-Headers", "Content-Type");
+}
+
+/**
+ * Helper to check if request method is POST
+ */
+function validatePostMethod(request: functions.Request, response: functions.Response): boolean {
+  if (request.method === "OPTIONS") {
+    response.status(204).send("");
+    return false;
+  }
+
+  if (request.method !== "POST") {
+    response.status(405).json({
+      success: false,
+      error: "Method not allowed. Use POST.",
+      errorCode: 405,
+    });
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Send confirmation code to phone number via YClients
- * 
+ *
  * Request body:
  * {
  *   "phoneNumber": "+79001234567"
  * }
- * 
+ *
  * Response (success):
  * {
  *   "success": true,
  *   "message": "Confirmation code sent successfully"
  * }
- * 
+ *
  * Response (error):
  * {
  *   "success": false,
@@ -86,24 +116,9 @@ export const health = functions.https.onRequest((request, response) => {
  * }
  */
 export const sendConfirmationCode = functions.https.onRequest(async (request, response) => {
-  // CORS headers
-  response.set("Access-Control-Allow-Origin", "*");
-  response.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-  response.set("Access-Control-Allow-Headers", "Content-Type");
-
-  // Handle preflight OPTIONS request
-  if (request.method === "OPTIONS") {
-    response.status(204).send("");
-    return;
-  }
-
-  // Only allow POST requests
-  if (request.method !== "POST") {
-    response.status(405).json({
-      success: false,
-      error: "Method not allowed. Use POST.",
-      errorCode: 405,
-    });
+  setCorsHeaders(response);
+  
+  if (!validatePostMethod(request, response)) {
     return;
   }
 
@@ -146,6 +161,118 @@ export const sendConfirmationCode = functions.https.onRequest(async (request, re
     response.status(200).json({
       success: true,
       message: result.meta?.message || "Confirmation code sent successfully",
+    });
+  } catch (error: any) {
+    handleFunctionError(error, response);
+  }
+});
+
+/**
+ * Authenticate client with YClients using phone number and SMS code
+ * 
+ * Request body:
+ * {
+ *   "phoneNumber": "375255045466",
+ *   "code": "7009"
+ * }
+ * 
+ * Response (success):
+ * {
+ *   "yclientsId": "123456",
+ *   "userToken": "abc123..."
+ * }
+ * 
+ * Response (error):
+ * {
+ *   "success": false,
+ *   "error": "Error message",
+ *   "errorCode": 400
+ * }
+ */
+export const authClient = functions.https.onRequest(async (request, response) => {
+  setCorsHeaders(response);
+  
+  if (!validatePostMethod(request, response)) {
+    return;
+  }
+
+  try {
+    // Validate request body
+    const { phoneNumber, code } = request.body;
+
+    if (!phoneNumber || !code) {
+      response.status(400).json({
+        success: false,
+        error: "Missing required fields: phoneNumber and code",
+        errorCode: 400,
+      });
+      return;
+    }
+
+    // Validate input types
+    if (typeof phoneNumber !== "string" || typeof code !== "string") {
+      response.status(400).json({
+        success: false,
+        error: "Invalid field types. phoneNumber and code must be strings",
+        errorCode: 400,
+      });
+      return;
+    }
+
+    // Authenticate user with YClients
+    functions.logger.info(`Authenticating client: ${phoneNumber}`);
+    
+    const authResult = await yclientsService.authenticateUserByCode({
+      phone: phoneNumber,
+      code: code,
+    });
+
+    if (!authResult.success || !authResult.data) {
+      functions.logger.error("Authentication failed", { authResult });
+      response.status(401).json({
+        success: false,
+        error: "Authentication failed. Invalid phone number or code.",
+        errorCode: 401,
+      });
+      return;
+    }
+
+    const userData = authResult.data;
+    const clientId = userData.id;
+    const userToken = userData.user_token;
+
+    functions.logger.info("Client authenticated successfully", { clientId, phone: phoneNumber });
+
+    // Check if user mapping already exists
+    let userMapping = await firestoreService.getYClientsUserMappingByClientId(clientId);
+
+    if (!userMapping) {
+      // Create new user mapping
+      functions.logger.info("Creating new user mapping for client", { clientId });
+      
+      userMapping = await firestoreService.createYClientsUserMapping({
+        clientId: clientId,
+        phone: phoneNumber,
+        userToken: userToken,
+        staffId: null, // Clients are not staff members
+      });
+
+      functions.logger.info("User mapping created", { mappingId: userMapping.id });
+    } else {
+      // Update existing mapping with latest token
+      functions.logger.info("Updating existing user mapping", { mappingId: userMapping.id });
+      
+      userMapping = await firestoreService.updateYClientsUserMapping({
+        id: userMapping.id,
+        userToken: userToken,
+        phone: phoneNumber,
+      });
+    }
+
+    // Return success response
+    response.status(200).json({
+      yclientsId: clientId.toString(),
+      userToken: userToken,
     });
   } catch (error: any) {
     handleFunctionError(error, response);
