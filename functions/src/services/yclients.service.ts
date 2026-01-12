@@ -1,7 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import {
   YClientsConfig,
-  YClientsRequestConfig,
   YClientsBaseResponse,
   YClientsErrorResponse,
   SendSmsCodeRequest,
@@ -23,13 +22,15 @@ import {
 export class YClientsService {
   private readonly axiosInstance: AxiosInstance;
   private readonly partnerToken: string;
-  private readonly defaultCompanyId?: number;
+  private readonly companyId: number;
+  private readonly defaultUserToken: string;
   private readonly baseUrl: string;
 
   constructor(config: YClientsConfig) {
     this.partnerToken = config.partnerToken;
     this.baseUrl = config.baseUrl || 'https://api.yclients.com';
-    this.defaultCompanyId = config.companyId;
+    this.companyId = config.companyId!;
+    this.defaultUserToken = config.defaultUserToken;
 
     this.axiosInstance = axios.create({
       baseURL: this.baseUrl,
@@ -60,11 +61,10 @@ export class YClientsService {
   }
 
   async sendSmsCode(
-    companyId: number,
     data: SendSmsCodeRequest
   ): Promise<SendSmsCodeResponse> {
     const response = await this.axiosInstance.post<SendSmsCodeResponse>(
-      `/api/v1/book_code/${companyId}`,
+      `/api/v1/book_code/${this.companyId}`,
       data
     );
     return response.data;
@@ -91,43 +91,37 @@ export class YClientsService {
   }
 
   async searchClients(
-    companyId: number,
     searchParams: ClientSearchRequest,
-    requestConfig?: YClientsRequestConfig
   ): Promise<ClientSearchResponse> {
     const response = await this.axiosInstance.post<ClientSearchResponse>(
-      `/api/v1/company/${companyId}/clients/search`,
+      `/api/v1/company/${this.companyId}/clients/search`,
       searchParams,
-      this.buildRequestConfig(requestConfig)
+      this.buildRequestConfig(true)
     );
     return response.data;
   }
 
   async getStaffList(
-    companyId: number,
     staffId?: number,
-    requestConfig?: YClientsRequestConfig
   ): Promise<StaffListResponse> {
     const url = staffId
-      ? `/api/v1/company/${companyId}/staff/${staffId}`
-      : `/api/v1/company/${companyId}/staff`;
+      ? `/api/v1/company/${this.companyId}/staff/${staffId}`
+      : `/api/v1/company/${this.companyId}/staff`;
 
     const response = await this.axiosInstance.get<StaffListResponse>(
       url,
-      this.buildRequestConfig(requestConfig)
+      this.buildRequestConfig(true)
     );
     return response.data;
   }
 
   async getRecords(
-    companyId: number,
     params?: RecordListParams,
-    requestConfig?: YClientsRequestConfig
   ): Promise<RecordListResponse> {
     const response = await this.axiosInstance.get<RecordListResponse>(
-      `/api/v1/records/${companyId}`,
+      `/api/v1/records/${this.companyId}`,
       {
-        ...this.buildRequestConfig(requestConfig),
+        ...this.buildRequestConfig(true),
         params,
       }
     );
@@ -140,12 +134,12 @@ export class YClientsService {
    * - Bearer {partnerToken}, User {userToken}
    */
   private buildRequestConfig(
-    config?: YClientsRequestConfig
+    withUser: boolean = false
   ): AxiosRequestConfig {
     const headers: Record<string, string> = {};
 
-    if (config?.userToken) {
-      headers['Authorization'] = `Bearer ${this.partnerToken}, User ${config.userToken}`;
+    if (withUser) {
+      headers['Authorization'] = `Bearer ${this.partnerToken}, User ${this.defaultUserToken}`;
     }
 
     return {
@@ -183,8 +177,12 @@ export class YClientsService {
     }
   }
 
-  getDefaultCompanyId(): number | undefined {
-    return this.defaultCompanyId;
+  getCompanyId(): number {
+    return this.companyId;
+  }
+
+  getDefaultUserToken(): string | undefined {
+    return this.defaultUserToken;
   }
 
   getBaseUrl(): string {

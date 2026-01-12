@@ -11,27 +11,53 @@ export const YCLIENTS_API_CONFIG = {
 } as const;
 
 /**
- * Default config values (overridable by environment variables)
+ * Company identifiers
  */
-const DEFAULT_CONFIG = {
-  PARTNER_TOKEN: 'c7kky7xxyg2pdsh5gzfg',
-  DEFAULT_USER_TOKEN: '6ad89961537fd64f64a1bad057f5b6d2',
-  COMPANY_ID: 1141478,
-  BASE_URL: YCLIENTS_API_CONFIG.BASE_URL,
-  TIMEOUT: YCLIENTS_API_CONFIG.DEFAULT_TIMEOUT,
+export type CompanyIdentifier = 'companyEntity' | 'companyChain';
+
+/**
+ * Company-specific configuration
+ */
+interface CompanyConfig {
+  PARTNER_TOKEN: string;
+  DEFAULT_USER_TOKEN: string;
+  COMPANY_ID: number;
+  BASE_URL: string;
+  TIMEOUT: number;
+}
+
+/**
+ * Default config values for both companies (overridable by environment variables)
+ */
+const DEFAULT_COMPANIES_CONFIG: Record<CompanyIdentifier, CompanyConfig> = {
+  companyEntity: {
+    PARTNER_TOKEN: 'c7kky7xxyg2pdsh5gzfg',
+    DEFAULT_USER_TOKEN: '6ad89961537fd64f64a1bad057f5b6d2',
+    COMPANY_ID: 1141478,
+    BASE_URL: YCLIENTS_API_CONFIG.BASE_URL,
+    TIMEOUT: YCLIENTS_API_CONFIG.DEFAULT_TIMEOUT,
+  },
+  companyChain: {
+    PARTNER_TOKEN: 'j7zrjzx5fwcbhys6bkpm',
+    DEFAULT_USER_TOKEN: 'e3c18940b35227b92cf128e541704664',
+    COMPANY_ID: 1714625,
+    BASE_URL: YCLIENTS_API_CONFIG.BASE_URL,
+    TIMEOUT: YCLIENTS_API_CONFIG.DEFAULT_TIMEOUT,
+  },
 } as const;
 
-export const getYClientsConfig = () => {
+/**
+ * Get config for a specific company
+ */
+export const getYClientsConfig = (company: CompanyIdentifier) => {
+  const defaultConfig = DEFAULT_COMPANIES_CONFIG[company];
+
   return {
-    partnerToken: process.env.YCLIENTS_PARTNER_TOKEN || DEFAULT_CONFIG.PARTNER_TOKEN,
-    defaultUserToken: process.env.YCLIENTS_DEFAULT_USER_TOKEN || DEFAULT_CONFIG.DEFAULT_USER_TOKEN,
-    companyId: process.env.YCLIENTS_COMPANY_ID
-      ? parseInt(process.env.YCLIENTS_COMPANY_ID, 10)
-      : DEFAULT_CONFIG.COMPANY_ID,
-    baseUrl: process.env.YCLIENTS_BASE_URL || DEFAULT_CONFIG.BASE_URL,
-    timeout: process.env.YCLIENTS_TIMEOUT
-      ? parseInt(process.env.YCLIENTS_TIMEOUT, 10)
-      : DEFAULT_CONFIG.TIMEOUT,
+    partnerToken: defaultConfig.PARTNER_TOKEN,
+    defaultUserToken: defaultConfig.DEFAULT_USER_TOKEN,
+    companyId: defaultConfig.COMPANY_ID,
+    baseUrl: defaultConfig.BASE_URL,
+    timeout: defaultConfig.TIMEOUT,
   };
 };
 

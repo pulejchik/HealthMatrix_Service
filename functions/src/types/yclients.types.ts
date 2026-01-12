@@ -313,15 +313,10 @@ export interface RecordListResponse {
 
 export interface YClientsConfig {
   partnerToken: string;
-  defaultUserToken?: string;
+  defaultUserToken: string;
   baseUrl?: string;
-  companyId?: number;
+  companyId: number;
   timeout?: number;
-}
-
-export interface YClientsRequestConfig {
-  userToken?: string;
-  companyId?: number;
 }
 
 export interface YClientsErrorResponse {

@@ -9,19 +9,14 @@ export * from "./config";
 
 // ========== Service Providers ==========
 
-export const yclientsConfig = getYClientsConfig();
-export const yclientsService: YClientsService = createYClientsService(yclientsConfig);
+export const yclientsConfigEntity = getYClientsConfig('companyEntity');
+export const yclientsConfigChain = getYClientsConfig('companyChain');
+
+export const yclientsServiceEntity: YClientsService = createYClientsService(yclientsConfigEntity);
+export const yclientsServiceChain: YClientsService = createYClientsService(yclientsConfigChain);
+
 export const firestoreService: FirestoreService = createFirestoreService();
 
-export function getCompanyId(): number {
-  const companyId = yclientsConfig.companyId;
-  
-  if (!companyId) {
-    throw new Error("YCLIENTS_COMPANY_ID is not configured. Please set the environment variable.");
-  }
-  
-  return companyId;
-}
 
 export const health = functions.https.onRequest((request, response) => {
   const healthStatus = {

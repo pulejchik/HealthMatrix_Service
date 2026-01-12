@@ -1,5 +1,8 @@
 import * as functions from "firebase-functions";
-import { yclientsService, firestoreService, getCompanyId, yclientsConfig } from "../index";
+import { 
+  yclientsServiceChain,
+  firestoreService
+} from "../index";
 
 /**
  * Helper to set CORS headers and handle OPTIONS requests
@@ -109,13 +112,13 @@ export const sendConfirmationCode = functions.https.onRequest(async (request, re
       return;
     }
 
-    // Get company ID (validates it's configured)
-    const companyId = getCompanyId();
+    // Use companyChain
+    // You can call yclientsServiceEntity.sendSmsCode() to use the entity company
 
     // Send SMS code via YClients
     functions.logger.info(`Sending confirmation code to: ${phoneNumber}`);
     
-    const result = await yclientsService.sendSmsCode(companyId, {
+    const result = await yclientsServiceChain.sendSmsCode({
       phone: phoneNumber,
     });
 
@@ -183,10 +186,13 @@ export const authClient = functions.https.onRequest(async (request, response) =>
       return;
     }
 
+    // Use companyChain
+    // You can call yclientsServiceEntity.authenticateUserByCode() to use the entity company
+    
     // Authenticate user with YClients
     functions.logger.info(`Authenticating client: ${phoneNumber}`);
     
-    const authResult = await yclientsService.authenticateUserByCode({
+    const authResult = await yclientsServiceChain.authenticateUserByCode({
       phone: phoneNumber,
       code: code,
     });
@@ -295,13 +301,13 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
       return;
     }
 
-    // Get company ID
-    const companyId = getCompanyId();
+    // Use companyChain
+    // You can call yclientsServiceEntity.authenticateUserByPassword() to use the entity company
 
     // Authenticate staff with YClients
     functions.logger.info(`Authenticating staff member: ${login}`);
     
-    const authResult = await yclientsService.authenticateUserByPassword({
+    const authResult = await yclientsServiceChain.authenticateUserByPassword({
       login: login,
       password: password,
     });
@@ -322,13 +328,9 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
 
     functions.logger.info("Staff authenticated successfully", { userId, login });
 
-    // Load staff list to find staffId (using default user token for authorization)
+    // Load staff list to find staffId (using default user token from service)
     functions.logger.info("Loading staff list to find staff record");
-    const staffListResult = await yclientsService.getStaffList(
-      companyId,
-      undefined,
-      { userToken: yclientsConfig.defaultUserToken }
-    );
+    const staffListResult = await yclientsServiceChain.getStaffList();
 
     if (!staffListResult.success || !staffListResult.data) {
       functions.logger.error("Failed to load staff list", { staffListResult });

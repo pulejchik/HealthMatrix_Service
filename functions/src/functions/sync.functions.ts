@@ -1,5 +1,9 @@
 import * as functions from "firebase-functions";
-import { firestoreService, getCompanyId, YClientsChatMapping, yclientsService } from "../index";
+import { 
+  firestoreService,
+  YClientsChatMapping,
+  yclientsServiceChain
+} from "../index";
 import { handleFunctionError } from "./auth.functions";
 import { YRecord } from "../types/yclients.types";
 import { ChatStatus } from "../types/firestore.types";
@@ -268,14 +272,13 @@ export const syncChats = functions.https.onRequest(async (request, response) => 
       clientId: currentUserMapping.clientId
     });
 
-    const companyId = getCompanyId();
+    // Use companyEntity by default
+    // You can call yclientsServiceChain.getRecords() to use the chain company
     const recordParams = currentUserMapping.staffId ? { staff_id: currentUserMapping.staffId } : { client_id: currentUserMapping.clientId };
     functions.logger.info("Loading records", recordParams);
 
-    const recordsResult = await yclientsService.getRecords(
-      companyId,
+    const recordsResult = await yclientsServiceChain.getRecords(
       recordParams,
-      { userToken: currentUserMapping.userToken }
     );
 
     if (!recordsResult.success || !recordsResult.data) {
