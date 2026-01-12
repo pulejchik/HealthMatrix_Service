@@ -14,8 +14,8 @@ export const YCLIENTS_API_CONFIG = {
  * Default config values (overridable by environment variables)
  */
 const DEFAULT_CONFIG = {
-  PARTNER_TOKEN: 'your-partner-token-here', // TODO: Replace with actual token
-  COMPANY_ID: undefined as number | undefined,
+  PARTNER_TOKEN: 'c7kky7xxyg2pdsh5gzfg',
+  COMPANY_ID: 1141478,
   BASE_URL: YCLIENTS_API_CONFIG.BASE_URL,
   TIMEOUT: YCLIENTS_API_CONFIG.DEFAULT_TIMEOUT,
 } as const;
