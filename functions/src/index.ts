@@ -1,9 +1,9 @@
 import * as functions from "firebase-functions";
 
-/**
- * Health check endpoint
- * Returns the service status and timestamp
- */
+export * from "./services";
+export * from "./types";
+export * from "./config";
+
 export const health = functions.https.onRequest((request, response) => {
   const healthStatus = {
     status: "healthy",
