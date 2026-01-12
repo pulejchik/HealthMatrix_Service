@@ -146,7 +146,9 @@ export const sendConfirmationCode = functions.https.onRequest(async (request, re
  * Response (success):
  * {
  *   "yclientsId": "123456",
- *   "userToken": "abc123..."
+ *   "userToken": "abc123...",
+ *   "name": "John",
+ *   "avatar": "https://..."
  * }
  * 
  * Response (error):
@@ -210,6 +212,8 @@ export const authClient = functions.https.onRequest(async (request, response) =>
     const userData = authResult.data;
     const clientId = userData.id;
     const userToken = userData.user_token;
+    const name = userData.name;
+    const avatar = userData.avatar;
 
     functions.logger.info("Client authenticated successfully", { clientId, phone: phoneNumber });
 
@@ -243,6 +247,8 @@ export const authClient = functions.https.onRequest(async (request, response) =>
     response.status(200).json({
       yclientsId: clientId.toString(),
       userToken: userToken,
+      name: name,
+      avatar: avatar,
     });
   } catch (error: any) {
     handleFunctionError(error, response);
@@ -261,7 +267,9 @@ export const authClient = functions.https.onRequest(async (request, response) =>
  * Response (success):
  * {
  *   "yclientsId": "123456",
- *   "userToken": "abc123..."
+ *   "userToken": "abc123...",
+ *   "name": "John",
+ *   "avatar": "https://..."
  * }
  * 
  * Response (error):
@@ -325,6 +333,8 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
     const userData = authResult.data;
     const userId = userData.id;
     const userToken = userData.user_token;
+    const name = userData.name;
+    const avatar = userData.avatar;
 
     functions.logger.info("Staff authenticated successfully", { userId, login });
 
@@ -391,6 +401,8 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
     response.status(200).json({
       yclientsId: userId.toString(),
       userToken: userToken,
+      name: name,
+      avatar: avatar,
     });
   } catch (error: any) {
     handleFunctionError(error, response);
