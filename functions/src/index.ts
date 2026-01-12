@@ -278,3 +278,151 @@ export const authClient = functions.https.onRequest(async (request, response) =>
     handleFunctionError(error, response);
   }
 });
+
+/**
+ * Authenticate staff member with YClients using login and password
+ * 
+ * Request body:
+ * {
+ *   "login": "375255045466",
+ *   "password": "mabFad-duvwe4"
+ * }
+ * 
+ * Response (success):
+ * {
+ *   "yclientsId": "123456",
+ *   "userToken": "abc123..."
+ * }
+ * 
+ * Response (error):
+ * {
+ *   "success": false,
+ *   "error": "Error message",
+ *   "errorCode": 400
+ * }
+ */
+export const authStaff = functions.https.onRequest(async (request, response) => {
+  setCorsHeaders(response);
+  
+  if (!validatePostMethod(request, response)) {
+    return;
+  }
+
+  try {
+    // Validate request body
+    const { login, password } = request.body;
+
+    if (!login || !password) {
+      response.status(400).json({
+        success: false,
+        error: "Missing required fields: login and password",
+        errorCode: 400,
+      });
+      return;
+    }
+
+    // Validate input types
+    if (typeof login !== "string" || typeof password !== "string") {
+      response.status(400).json({
+        success: false,
+        error: "Invalid field types. login and password must be strings",
+        errorCode: 400,
+      });
+      return;
+    }
+
+    // Get company ID
+    const companyId = getCompanyId();
+
+    // Authenticate staff with YClients
+    functions.logger.info(`Authenticating staff member: ${login}`);
+    
+    const authResult = await yclientsService.authenticateUserByPassword({
+      login: login,
+      password: password,
+    });
+
+    if (!authResult.success || !authResult.data) {
+      functions.logger.error("Authentication failed", { authResult });
+      response.status(401).json({
+        success: false,
+        error: "Authentication failed. Invalid login or password.",
+        errorCode: 401,
+      });
+      return;
+    }
+
+    const userData = authResult.data;
+    const userId = userData.id;
+    const userToken = userData.user_token;
+
+    functions.logger.info("Staff authenticated successfully", { userId, login });
+
+    // Load staff list to find staffId (using default user token for authorization)
+    functions.logger.info("Loading staff list to find staff record");
+    const staffListResult = await yclientsService.getStaffList(
+      companyId,
+      undefined,
+      { userToken: yclientsConfig.defaultUserToken }
+    );
+
+    if (!staffListResult.success || !staffListResult.data) {
+      functions.logger.error("Failed to load staff list", { staffListResult });
+      response.status(500).json({
+        success: false,
+        error: "Failed to load staff information",
+        errorCode: 500,
+      });
+      return;
+    }
+
+    // Find staff member by user_id or phone
+    const staffMember = staffListResult.data.find(staff => 
+      staff.user_id === userId || staff.user?.phone === login
+    );
+
+    let staffId: number | null = null;
+    
+    if (staffMember) {
+      staffId = staffMember.id;
+      functions.logger.info("Staff member found in staff list", { staffId, userId });
+    } else {
+      functions.logger.warn("Staff member not found in staff list", { userId, login });
+    }
+
+    // Check if user mapping already exists
+    let userMapping = await firestoreService.getYClientsUserMappingByClientId(userId);
+
+    if (!userMapping) {
+      // Create new user mapping
+      functions.logger.info("Creating new user mapping for staff", { userId, staffId });
+      
+      userMapping = await firestoreService.createYClientsUserMapping({
+        clientId: userId,
+        phone: login,
+        userToken: userToken,
+        staffId: staffId,
+      });
+
+      functions.logger.info("User mapping created", { mappingId: userMapping.id });
+    } else {
+      // Update existing mapping with latest token and staffId
+      functions.logger.info("Updating existing user mapping", { mappingId: userMapping.id });
+      
+      userMapping = await firestoreService.updateYClientsUserMapping({
+        id: userMapping.id,
+        userToken: userToken,
+        phone: login,
+        staffId: staffId,
+      });
+    }
+
+    // Return success response
+    response.status(200).json({
+      yclientsId: userId.toString(),
+      userToken: userToken,
+    });
+  } catch (error: any) {
+    handleFunctionError(error, response);
+  }
+});

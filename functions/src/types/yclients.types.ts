@@ -313,6 +313,7 @@ export interface RecordListResponse {
 
 export interface YClientsConfig {
   partnerToken: string;
+  defaultUserToken?: string;
   baseUrl?: string;
   companyId?: number;
   timeout?: number;

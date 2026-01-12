@@ -15,6 +15,7 @@ export const YCLIENTS_API_CONFIG = {
  */
 const DEFAULT_CONFIG = {
   PARTNER_TOKEN: 'c7kky7xxyg2pdsh5gzfg',
+  DEFAULT_USER_TOKEN: '6ad89961537fd64f64a1bad057f5b6d2',
   COMPANY_ID: 1141478,
   BASE_URL: YCLIENTS_API_CONFIG.BASE_URL,
   TIMEOUT: YCLIENTS_API_CONFIG.DEFAULT_TIMEOUT,
@@ -23,6 +24,7 @@ const DEFAULT_CONFIG = {
 export const getYClientsConfig = () => {
   return {
     partnerToken: process.env.YCLIENTS_PARTNER_TOKEN || DEFAULT_CONFIG.PARTNER_TOKEN,
+    defaultUserToken: process.env.YCLIENTS_DEFAULT_USER_TOKEN || DEFAULT_CONFIG.DEFAULT_USER_TOKEN,
     companyId: process.env.YCLIENTS_COMPANY_ID
       ? parseInt(process.env.YCLIENTS_COMPANY_ID, 10)
       : DEFAULT_CONFIG.COMPANY_ID,
