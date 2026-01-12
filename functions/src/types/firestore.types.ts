@@ -13,6 +13,7 @@ export interface YClientsUserMapping {
 export interface YClientsChatMapping {
   id: string;
   clientId: number;
+  clientPhone: string;
   staffId: number;
   recordId: number;
 }

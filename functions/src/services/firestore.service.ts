@@ -157,6 +157,18 @@ export class FirestoreService {
     return { id: doc.id, ...doc.data() } as YClientsChatMapping;
   }
 
+  async getYClientsChatMappingByClientPhone(clientPhone: string): Promise<YClientsChatMapping[]> {
+    const snapshot = await this.db
+      .collection(FIRESTORE_COLLECTIONS.YCLIENTS_CHATS_MAPPING)
+      .where('clientPhone', '==', clientPhone)
+      .get();
+
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    } as YClientsChatMapping));
+  }
+
   async createYClientsChatMapping(data: YClientsChatMappingCreate): Promise<YClientsChatMapping> {
     const { id, ...rest } = data;
     const docRef = id

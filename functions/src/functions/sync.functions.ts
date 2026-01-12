@@ -65,12 +65,26 @@ async function loadChatParticipants(record: YRecord): Promise<ChatParticipants> 
     }
   }
 
-  if (record.client?.id) {
-    const clientMapping = await firestoreService.getYClientsUserMappingByClientId(record.client.id);
+  if (record.client?.phone) {
+    // Search by phone first (more reliable)
+    const clientMapping = await firestoreService.getYClientsUserMappingByPhone(record.client.phone);
     if (clientMapping) {
       const clientUser = await firestoreService.getUserByYClientsId(clientMapping.id);
       if (clientUser) {
         userIds.push(clientUser.id);
+      }
+    } else if (record.client?.id) {
+      // Fallback to search by client ID
+      functions.logger.info("Client not found by phone, trying by ID", { 
+        phone: record.client.phone, 
+        clientId: record.client.id 
+      });
+      const clientMappingById = await firestoreService.getYClientsUserMappingByClientId(record.client.id);
+      if (clientMappingById) {
+        const clientUser = await firestoreService.getUserByYClientsId(clientMappingById.id);
+        if (clientUser) {
+          userIds.push(clientUser.id);
+        }
       }
     }
   }
@@ -119,6 +133,7 @@ async function createNewChat(
 
   const chatMapping = await firestoreService.createYClientsChatMapping({
     clientId: record.client.id,
+    clientPhone: record.client.phone,
     staffId: record.staff_id,
     recordId: record.id,
   });
@@ -136,6 +151,45 @@ async function createNewChat(
   functions.logger.info("Chat created", { chatId: newChat.id });
 
   return true;
+}
+
+async function loadRecordsForUser(
+  staffId: number | null,
+  clientId: number,
+  phone: string
+): Promise<YRecord[]> {
+  // First attempt: Load by staff_id or client_id
+  const recordParams = staffId ? { staff_id: staffId } : { client_id: clientId };
+  functions.logger.info("Loading records by ID", recordParams);
+
+  let recordsResult = await yclientsServiceChain.getRecords(recordParams);
+
+  if (!recordsResult.success || !recordsResult.data) {
+    functions.logger.error("Failed to load records", { recordsResult });
+    throw new Error("Failed to load records from YClients");
+  }
+
+  // If no records found, try loading all and filtering by phone
+  if (recordsResult.data.length === 0) {
+    functions.logger.info("No records found by ID, loading all and filtering by phone", { phone });
+    
+    recordsResult = await yclientsServiceChain.getRecords();
+    
+    if (!recordsResult.success || !recordsResult.data) {
+      functions.logger.error("Failed to load all records", { recordsResult });
+      throw new Error("Failed to load records from YClients");
+    }
+
+    const filteredRecords = recordsResult.data.filter(record => {
+      const clientPhone = record.client?.phone;
+      return clientPhone === phone;
+    });
+
+    functions.logger.info(`Filtered ${filteredRecords.length} records by phone from ${recordsResult.data.length} total`);
+    return filteredRecords;
+  }
+
+  return recordsResult.data;
 }
 
 async function processRecord(record: YRecord, stats: SyncStats): Promise<void> {
@@ -272,17 +326,17 @@ export const syncChats = functions.https.onRequest(async (request, response) => 
       clientId: currentUserMapping.clientId
     });
 
-    // Use companyEntity by default
-    // You can call yclientsServiceChain.getRecords() to use the chain company
-    const recordParams = currentUserMapping.staffId ? { staff_id: currentUserMapping.staffId } : { client_id: currentUserMapping.clientId };
-    functions.logger.info("Loading records", recordParams);
-
-    const recordsResult = await yclientsServiceChain.getRecords(
-      recordParams,
-    );
-
-    if (!recordsResult.success || !recordsResult.data) {
-      functions.logger.error("Failed to load records", { recordsResult });
+    // Load records for the user (with fallback to phone filtering)
+    let records: YRecord[];
+    try {
+      records = await loadRecordsForUser(
+        currentUserMapping.staffId,
+        currentUserMapping.clientId,
+        currentUserMapping.phone
+      );
+      functions.logger.info(`Loaded ${records.length} records`);
+    } catch (error: any) {
+      functions.logger.error("Failed to load records", { error: error.message });
       response.status(500).json({
         success: false,
         error: "Failed to load records from YClients",
@@ -290,9 +344,6 @@ export const syncChats = functions.https.onRequest(async (request, response) => 
       });
       return;
     }
-
-    const records = recordsResult.data;
-    functions.logger.info(`Loaded ${ records.length } records`);
 
     const stats: SyncStats = {
       recordsProcessed: 0,
