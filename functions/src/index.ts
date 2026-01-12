@@ -381,14 +381,18 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
       staff.user_id === userId || staff.user?.phone === login
     );
 
-    let staffId: number | null = null;
-    
-    if (staffMember) {
-      staffId = staffMember.id;
-      functions.logger.info("Staff member found in staff list", { staffId, userId });
-    } else {
-      functions.logger.warn("Staff member not found in staff list", { userId, login });
+    if (!staffMember) {
+      functions.logger.error("Staff member not found in staff list", { userId, login });
+      response.status(403).json({
+        success: false,
+        error: "User authenticated but not found in staff list. Access denied.",
+        errorCode: 403,
+      });
+      return;
     }
+    
+    const staffId = staffMember.id;
+    functions.logger.info("Staff member found in staff list", { staffId, userId });
 
     // Check if user mapping already exists
     let userMapping = await firestoreService.getYClientsUserMappingByClientId(userId);
