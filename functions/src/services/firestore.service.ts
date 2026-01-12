@@ -71,6 +71,21 @@ export class FirestoreService {
     return { id: doc.id, ...doc.data() } as YClientsUserMapping;
   }
 
+  async getYClientsUserMappingByStaffId(staffId: number): Promise<YClientsUserMapping | null> {
+    const snapshot = await this.db
+      .collection(FIRESTORE_COLLECTIONS.YCLIENTS_USERS_MAPPING)
+      .where('staffId', '==', staffId)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      return null;
+    }
+
+    const doc = snapshot.docs[0];
+    return { id: doc.id, ...doc.data() } as YClientsUserMapping;
+  }
+
   async createYClientsUserMapping(data: YClientsUserMappingCreate): Promise<YClientsUserMapping> {
     const { id, ...rest } = data;
     const docRef = id

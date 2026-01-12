@@ -34,4 +34,4 @@ export const health = functions.https.onRequest((request, response) => {
   response.status(200).json(healthStatus);
 });
 
-export { sendConfirmationCode, authClient, authStaff } from "./functions";
+export { sendConfirmationCode, authClient, authStaff, syncChats } from "./functions";
