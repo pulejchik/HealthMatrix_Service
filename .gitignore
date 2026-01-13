@@ -14,6 +14,10 @@ firebase-debug.*.log
 .env
 .env.local
 
+# Service account keys (NEVER commit these!)
+serviceAccountKey.json
+**/serviceAccountKey.json
+
 # IDE
 .idea/
 .vscode/

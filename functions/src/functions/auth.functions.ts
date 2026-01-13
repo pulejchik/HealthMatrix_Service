@@ -1,7 +1,7 @@
 import * as functions from "firebase-functions";
-import { 
+import {
   yclientsServiceChain,
-  firestoreService
+  firestoreService, getAuth
 } from "../index";
 
 /**
@@ -243,10 +243,15 @@ export const authClient = functions.https.onRequest(async (request, response) =>
       });
     }
 
+    const firebaseToken = await getAuth().createCustomToken(clientId.toString(), {
+      phone: phoneNumber,
+      role: 'client',
+    });
+
     // Return success response
     response.status(200).json({
       yclientsId: clientId.toString(),
-      userToken: userToken,
+      userToken: firebaseToken,
       name: name,
       avatar: avatar,
     });
@@ -397,10 +402,15 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
       });
     }
 
+    const firebaseToken = await getAuth().createCustomToken(userId.toString(), {
+      login: login,
+      role: 'staff',
+    });
+
     // Return success response
     response.status(200).json({
       yclientsId: userId.toString(),
-      userToken: userToken,
+      userToken: firebaseToken,
       name: name,
       avatar: avatar,
     });
