@@ -108,6 +108,7 @@ async function updateExistingChat(
     await firestoreService.updateChat({
       id: existingChat.id,
       title: chatTitle,
+      text: record.services[0].title ?? null,
       status: chatStatus,
       users: chatUserIds,
     });
@@ -124,6 +125,7 @@ async function updateExistingChat(
 
 async function createNewChat(
   record: YRecord,
+  chatStatus: ChatStatus,
   chatTitle: string | null,
   chatUserIds: string[]
 ): Promise<boolean> {
@@ -148,7 +150,8 @@ async function createNewChat(
     yclientsId: chatMapping.id,
     users: chatUserIds,
     title: chatTitle,
-    status: "new",
+    text: record.services[0].title ?? null,
+    status: chatStatus,
     createdAt: now,
     updatedAt: now,
   });
@@ -223,7 +226,7 @@ async function processRecord(record: YRecord, stats: SyncStats): Promise<void> {
       stats.chatsUpdated++;
     }
   } else {
-    const created = await createNewChat(record, chatTitle, chatUserIds);
+    const created = await createNewChat(record, chatStatus, chatTitle, chatUserIds);
     if (created) {
       stats.chatsCreated++;
     }

@@ -32,6 +32,7 @@ export interface Chat {
   yclientsId: string;
   users: string[];
   title: string | null;
+  text: string | null;
   createdAt: number; // epochMillis
   updatedAt: number; // epochMillis
   status: ChatStatus;
