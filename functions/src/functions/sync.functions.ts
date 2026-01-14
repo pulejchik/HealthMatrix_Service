@@ -101,11 +101,10 @@ async function updateExistingChat(
 
   const existingChat = await firestoreService.getChatByYClientsId(chatMapping.id);
   if (existingChat) {
-    const text = record.services[0].title ?? null;
-    if (existingChat.text == text
-      && existingChat.title === chatTitle
+    if (existingChat.title === chatTitle
       && existingChat.status === chatStatus
-      && existingChat.users === chatUserIds
+      && existingChat.users.length === chatUserIds.length
+      && existingChat.users.every(item => chatUserIds.includes(item))
     ) {
       functions.logger.info("Chat data the same, not updated", { chatId: existingChat.id });
       return true;
@@ -113,7 +112,6 @@ async function updateExistingChat(
     await firestoreService.updateChat({
       id: existingChat.id,
       title: chatTitle,
-      text: text,
       status: chatStatus,
       users: chatUserIds,
     });
@@ -155,7 +153,6 @@ async function createNewChat(
     yclientsId: chatMapping.id,
     users: chatUserIds,
     title: chatTitle,
-    text: record.services[0].title ?? null,
     status: chatStatus,
     createdAt: now,
     updatedAt: now,
