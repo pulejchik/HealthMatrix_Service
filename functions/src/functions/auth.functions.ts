@@ -250,7 +250,7 @@ export const authClient = functions.https.onRequest(async (request, response) =>
 
     // Return success response
     response.status(200).json({
-      yclientsId: clientId.toString(),
+      yclientsId: userMapping.id,
       userToken: firebaseToken,
       name: name,
       avatar: avatar,
@@ -409,7 +409,7 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
 
     // Return success response
     response.status(200).json({
-      yclientsId: userId.toString(),
+      yclientsId: userMapping.id,
       userToken: firebaseToken,
       name: name,
       avatar: avatar,
