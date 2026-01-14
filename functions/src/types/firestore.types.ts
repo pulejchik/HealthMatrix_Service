@@ -61,4 +61,4 @@ export type ChatUpdate = Partial<Omit<Chat, 'id'>> & { id: string };
 export type YClientsUserMappingCreate = Omit<YClientsUserMapping, 'id'> & { id?: string };
 export type YClientsChatMappingCreate = Omit<YClientsChatMapping, 'id'> & { id?: string };
 export type UserCreate = Omit<User, 'id'> & { id?: string };
-export type ChatCreate = Omit<Chat, 'id'> & { id?: string };
+export type ChatCreate = Omit<Chat, 'id'> & { id: string };

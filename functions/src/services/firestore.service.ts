@@ -364,22 +364,18 @@ export class FirestoreService {
   }
 
   async createChat(data: ChatCreate): Promise<Chat> {
-    const { id, ...rest } = data;
     const now = Date.now();
     
     const chatData = {
-      ...rest,
-      createdAt: rest.createdAt || now,
-      updatedAt: rest.updatedAt || now,
+      ...data,
+      createdAt: data.createdAt || now,
+      updatedAt: data.updatedAt || now,
     };
 
-    const docRef = id
-      ? this.db.collection(FIRESTORE_COLLECTIONS.CHATS).doc(id)
-      : this.db.collection(FIRESTORE_COLLECTIONS.CHATS).doc();
-
+    const docRef = this.db.collection(FIRESTORE_COLLECTIONS.CHATS).doc(data.id);
     await docRef.set(chatData);
 
-    return { id: docRef.id, ...chatData };
+    return { ...chatData };
   }
 
   async updateChat(data: ChatUpdate): Promise<Chat> {

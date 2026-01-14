@@ -7,6 +7,7 @@ import {
 import { handleFunctionError } from "./auth.functions";
 import { YRecord } from "../types/yclients.types";
 import { ChatStatus } from "../types/firestore.types";
+import { randomUUID } from "node:crypto";
 
 interface SyncStats {
   recordsProcessed: number;
@@ -98,6 +99,7 @@ async function updateExistingChat(
   chatMapping: YClientsChatMapping,
   chatStatus: ChatStatus,
   chatTitle: string | null,
+  chatUserIds: string[],
 ): Promise<boolean> {
   functions.logger.info("Chat mapping exists, updating", { mappingId: chatMapping?.id });
 
@@ -107,6 +109,7 @@ async function updateExistingChat(
       id: existingChat.id,
       title: chatTitle,
       status: chatStatus,
+      users: chatUserIds,
     });
     functions.logger.info("Chat updated", { chatId: existingChat.id });
     return true;
@@ -141,6 +144,7 @@ async function createNewChat(
 
   const now = Date.now();
   const newChat = await firestoreService.createChat({
+    id: randomUUID(),
     yclientsId: chatMapping.id,
     users: chatUserIds,
     title: chatTitle,
@@ -213,6 +217,7 @@ async function processRecord(record: YRecord, stats: SyncStats): Promise<void> {
       chatMapping,
       chatStatus,
       chatTitle,
+      chatUserIds,
     );
     if (updated) {
       stats.chatsUpdated++;
