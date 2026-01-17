@@ -4,6 +4,8 @@ import {
   YClientsChatMapping,
   User,
   Chat,
+  Message,
+  Notification,
   FIRESTORE_COLLECTIONS,
   YClientsUserMappingCreate,
   YClientsChatMappingCreate,
@@ -414,6 +416,65 @@ export class FirestoreService {
   async deleteChat(id: string): Promise<void> {
     await this.db
       .collection(FIRESTORE_COLLECTIONS.CHATS)
+      .doc(id)
+      .delete();
+  }
+
+  // ========== Message Operations ==========
+
+  async getMessage(chatId: string, messageId: string): Promise<Message | null> {
+    const doc = await this.db
+      .collection(FIRESTORE_COLLECTIONS.CHATS)
+      .doc(chatId)
+      .collection(FIRESTORE_COLLECTIONS.MESSAGES)
+      .doc(messageId)
+      .get();
+
+    if (!doc.exists) {
+      return null;
+    }
+
+    return { id: doc.id, ...doc.data() } as Message;
+  }
+
+  // ========== Notification Operations ==========
+
+  async getPendingNotifications(): Promise<Notification[]> {
+    const snapshot = await this.db
+      .collection(FIRESTORE_COLLECTIONS.NOTIFICATIONS_PENDING)
+      .get();
+
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    } as Notification));
+  }
+
+  async moveNotificationToSent(notification: Notification): Promise<void> {
+    const batch = this.db.batch();
+
+    // Add to sent collection
+    const sentRef = this.db
+      .collection(FIRESTORE_COLLECTIONS.NOTIFICATIONS_SENT)
+      .doc(notification.id);
+    batch.set(sentRef, notification);
+
+    // Remove from pending collection
+    const pendingRef = this.db
+      .collection(FIRESTORE_COLLECTIONS.NOTIFICATIONS_PENDING)
+      .doc(notification.id);
+    batch.delete(pendingRef);
+
+    await batch.commit();
+  }
+
+  async deleteNotification(id: string, isPending: boolean = true): Promise<void> {
+    const collection = isPending 
+      ? FIRESTORE_COLLECTIONS.NOTIFICATIONS_PENDING 
+      : FIRESTORE_COLLECTIONS.NOTIFICATIONS_SENT;
+    
+    await this.db
+      .collection(collection)
       .doc(id)
       .delete();
   }
