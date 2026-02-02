@@ -229,6 +229,7 @@ export const authClient = functions.https.onRequest(async (request, response) =>
         phone: phoneNumber,
         userToken: userToken,
         staffId: null, // Clients are not staff members
+        name: name,
       });
 
       functions.logger.info("User mapping created", { mappingId: userMapping.id });
@@ -240,6 +241,7 @@ export const authClient = functions.https.onRequest(async (request, response) =>
         id: userMapping.id,
         userToken: userToken,
         phone: phoneNumber,
+        name: name,
       });
     }
 
@@ -338,7 +340,6 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
     const userData = authResult.data;
     const userId = userData.id;
     const userToken = userData.user_token;
-    const name = userData.name;
     const avatar = userData.avatar;
 
     functions.logger.info("Staff authenticated successfully", { userId, login });
@@ -371,8 +372,10 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
       });
       return;
     }
-    
+
     const staffId = staffMember.id;
+    const name = staffMember.name;
+
     functions.logger.info("Staff member found in staff list", { staffId, userId });
 
     // Check if user mapping already exists
@@ -387,6 +390,7 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
         phone: login,
         userToken: userToken,
         staffId: staffId,
+        name: name,
       });
 
       functions.logger.info("User mapping created", { mappingId: userMapping.id });
@@ -399,6 +403,7 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
         userToken: userToken,
         phone: login,
         staffId: staffId,
+        name: name,
       });
     }
 
