@@ -6,6 +6,7 @@ import { getYClientsConfig } from "./config/yclients.config";
 export * from "./services";
 export * from "./types";
 export * from "./config";
+export * from "./utils";
 
 // ========== Service Providers ==========
 
@@ -29,4 +30,11 @@ export const health = functions.https.onRequest((request, response) => {
   response.status(200).json(healthStatus);
 });
 
-export { sendConfirmationCode, authClient, authStaff, syncChats, processPendingNotifications } from "./functions";
+export { 
+  sendConfirmationCode, 
+  authClient, 
+  authStaff, 
+  syncChats, 
+  syncYClientsRecordsScheduled,
+  processPendingNotifications 
+} from "./functions";

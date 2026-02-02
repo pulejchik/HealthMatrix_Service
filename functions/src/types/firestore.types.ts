@@ -2,6 +2,8 @@
  * Firestore Document Types
  */
 
+import * as admin from 'firebase-admin';
+
 export interface YClientsUserMapping {
   id: string;
   clientId: number;
@@ -16,7 +18,20 @@ export interface YClientsChatMapping {
   clientId: number;
   clientPhone: string;
   staffId: number;
+  staffPhone?: string;
+}
+
+export interface YClientsRecord {
+  id: string; // Will be set to recordId from YClients
   recordId: number;
+  deleted: boolean;
+  serviceTitle: string | null;
+  serviceId: number | null;
+  datetime: admin.firestore.Timestamp;
+  attendance: number;
+  length: number;
+  payment_status: number;
+  bookform_id?: number;
 }
 
 export interface User {
@@ -76,6 +91,7 @@ export interface Notification {
 export const FIRESTORE_COLLECTIONS = {
   YCLIENTS_USERS_MAPPING: 'yclients/mapping/yclientsUsers',
   YCLIENTS_CHATS_MAPPING: 'yclients/mapping/yclientsChats',
+  YCLIENTS_RECORDS: 'yclientsRecords', // Subcollection under yclientsChats
   USERS: 'users',
   CHATS: 'chats',
   MESSAGES: 'messages',
@@ -88,6 +104,7 @@ export const FIRESTORE_COLLECTIONS = {
  */
 export type YClientsUserMappingUpdate = Partial<Omit<YClientsUserMapping, 'id'>> & { id: string };
 export type YClientsChatMappingUpdate = Partial<Omit<YClientsChatMapping, 'id'>> & { id: string };
+export type YClientsRecordUpdate = Partial<Omit<YClientsRecord, 'id'>> & { id: string };
 export type UserUpdate = Partial<Omit<User, 'id'>> & { id: string };
 export type ChatUpdate = Partial<Omit<Chat, 'id'>> & { id: string };
 export type NotificationUpdate = Partial<Omit<Notification, 'id'>> & { id: string };
@@ -97,6 +114,7 @@ export type NotificationUpdate = Partial<Omit<Notification, 'id'>> & { id: strin
  */
 export type YClientsUserMappingCreate = Omit<YClientsUserMapping, 'id'> & { id?: string };
 export type YClientsChatMappingCreate = Omit<YClientsChatMapping, 'id'> & { id?: string };
+export type YClientsRecordCreate = Omit<YClientsRecord, 'id'> & { id?: string };
 export type UserCreate = Omit<User, 'id'> & { id?: string };
 export type ChatCreate = Omit<Chat, 'id'> & { id: string };
 export type NotificationCreate = Omit<Notification, 'id'> & { id?: string };
