@@ -141,6 +141,17 @@ export class FirestoreService {
     return { id: doc.id, ...doc.data() } as YClientsChatMapping;
   }
 
+  async getAllYClientsChatMappings(): Promise<YClientsChatMapping[]> {
+    const snapshot = await this.db
+      .collection(FIRESTORE_COLLECTIONS.YCLIENTS_CHATS_MAPPING)
+      .get();
+
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    } as YClientsChatMapping));
+  }
+
   async createYClientsChatMapping(data: YClientsChatMappingCreate): Promise<YClientsChatMapping> {
     const { id, ...rest } = data;
     const docRef = id
@@ -167,6 +178,20 @@ export class FirestoreService {
     }
 
     return { id: doc.id, ...doc.data() } as YClientsRecord;
+  }
+
+  async getYClientsRecordsByChat(chatId: string): Promise<YClientsRecord[]> {
+    const snapshot = await this.db
+      .collection(FIRESTORE_COLLECTIONS.YCLIENTS_CHATS_MAPPING)
+      .doc(chatId)
+      .collection(FIRESTORE_COLLECTIONS.YCLIENTS_RECORDS)
+      .orderBy('datetime', 'desc')
+      .get();
+
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    } as YClientsRecord));
   }
 
   async createYClientsRecord(chatId: string, data: YClientsRecordCreate): Promise<YClientsRecord> {

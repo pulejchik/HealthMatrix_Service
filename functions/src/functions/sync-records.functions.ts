@@ -3,8 +3,10 @@ import { firestoreService, YClientsChatMapping, yclientsServiceChain } from "../
 import { YRecord } from "../types";
 import { dateStringToTimestamp } from "../utils";
 
-
-// ========== Scheduled YClients Sync Function ==========
+/**
+ * Sync YClients Records to Firebase
+ * Scheduled function that runs every 1 minute
+ */
 
 interface ScheduledSyncStats {
   totalRecordsProcessed: number;

@@ -50,6 +50,7 @@ export interface Chat {
   yclientsId: string;
   users: string[];
   title: string | null;
+  date: admin.firestore.Timestamp | null; // Date from nearest active or last record
   createdAt: number; // epochMillis
   updatedAt: number; // epochMillis
   status: ChatStatus;
