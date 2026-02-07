@@ -240,10 +240,10 @@ async function processYClientsChat(
 
 /**
  * Scheduled function that syncs YClients chat mappings to /chats collection
- * Runs every 1 minute
+ * Runs every 5 minute
  */
 export const syncYClientsChatsToChats = functions.pubsub
-  .schedule("every 1 minutes")
+  .schedule("every 5 minutes")
   .timeZone("UTC")
   .onRun(async (context) => {
     functions.logger.info("Starting scheduled YClients chats to chats sync");

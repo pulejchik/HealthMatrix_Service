@@ -251,11 +251,11 @@ async function processStaffRecords(
 }
 
 /**
- * Scheduled function that syncs YClients records every minute
+ * Scheduled function that syncs YClients records every 5 minute
  * Fetches all staff members and their records, then creates/updates chats and records
  */
 export const syncYClientsRecordsScheduled = functions.pubsub
-  .schedule("every 1 minutes")
+  .schedule("every 5 minutes")
   .timeZone("UTC")
   .onRun(async (context) => {
     functions.logger.info("Starting scheduled YClients records sync");
