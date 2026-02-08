@@ -90,6 +90,8 @@ async function syncRecordToChat(
     length: record.length,
     payment_status: record.payment_status,
     bookform_id: record.bookform_id,
+    staffName: record.staff?.name || null,
+    clientName: record.client?.name || null,
   };
 
   // Check if record already exists
@@ -105,7 +107,9 @@ async function syncRecordToChat(
       existingRecord.attendance !== recordData.attendance ||
       existingRecord.length !== recordData.length ||
       existingRecord.payment_status !== recordData.payment_status ||
-      existingRecord.bookform_id !== recordData.bookform_id;
+      existingRecord.bookform_id !== recordData.bookform_id ||
+      existingRecord.staffName !== recordData.staffName ||
+      existingRecord.clientName !== recordData.clientName;
 
     if (needsUpdate) {
       await firestoreService.setYClientsRecord(chatId, recordData);

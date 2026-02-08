@@ -32,6 +32,8 @@ export interface YClientsRecord {
   length: number;
   payment_status: number;
   bookform_id?: number;
+  staffName: string | null;
+  clientName: string | null;
 }
 
 export interface User {
@@ -51,6 +53,8 @@ export interface Chat {
   users: string[];
   title: string | null;
   date: number | null; // epochMillis - Date from nearest active or last record
+  staffName: string | null;
+  clientName: string | null;
   createdAt: number; // epochMillis
   updatedAt: number; // epochMillis
   status: ChatStatus;

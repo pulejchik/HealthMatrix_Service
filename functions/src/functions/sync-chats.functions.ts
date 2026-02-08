@@ -19,6 +19,8 @@ interface ChatSyncStats {
 interface RecordInfo {
   title: string | null;
   date: number; // epochMillis
+  staffName: string | null;
+  clientName: string | null;
 }
 
 /**
@@ -80,6 +82,8 @@ function findRecordForChatInfo(records: YClientsRecord[]): RecordInfo | null {
     return {
       title: nearest.serviceTitle,
       date: nearest.datetime.toMillis(),
+      staffName: nearest.staffName,
+      clientName: nearest.clientName,
     };
   }
 
@@ -91,6 +95,8 @@ function findRecordForChatInfo(records: YClientsRecord[]): RecordInfo | null {
   return {
     title: lastRecord.serviceTitle,
     date: lastRecord.datetime.toMillis(),
+    staffName: lastRecord.staffName,
+    clientName: lastRecord.clientName,
   };
 }
 
@@ -160,11 +166,13 @@ async function processYClientsChat(
     // Determine chat status
     const status = determineChatStatus(records);
 
-    // Find record for title and date
+    // Find record for title, date, and names
     const recordInfo = findRecordForChatInfo(records);
     
     const title = recordInfo?.title || null;
     const date = recordInfo?.date || null;
+    const staffName = recordInfo?.staffName || null;
+    const clientName = recordInfo?.clientName || null;
 
     // Map users
     const users = await mapYClientsUsersToUserIds(
@@ -178,6 +186,8 @@ async function processYClientsChat(
       chatId: chatMapping.id,
       status,
       title,
+      staffName,
+      clientName,
       usersCount: users.length,
       recordsCount: records.length
     });
@@ -191,6 +201,8 @@ async function processYClientsChat(
         existingChat.status !== status ||
         existingChat.title !== title ||
         existingChat.date !== date ||
+        existingChat.staffName !== staffName ||
+        existingChat.clientName !== clientName ||
         JSON.stringify(existingChat.users.sort()) !== JSON.stringify(users.sort());
 
       if (needsUpdate) {
@@ -199,6 +211,8 @@ async function processYClientsChat(
           status,
           title,
           date,
+          staffName,
+          clientName,
           users,
         });
 
@@ -216,6 +230,8 @@ async function processYClientsChat(
         users,
         title,
         date,
+        staffName,
+        clientName,
         status,
         createdAt: now,
         updatedAt: now,
