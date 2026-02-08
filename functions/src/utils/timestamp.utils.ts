@@ -49,3 +49,28 @@ export function epochMillisToTimestamp(epochMillis: number): admin.firestore.Tim
 export function timestampToEpochMillis(timestamp: admin.firestore.Timestamp): number {
   return timestamp.toMillis();
 }
+
+/**
+ * Format a date as YYYY-MM-DD string (UTC timezone)
+ * @param date - Date object to format
+ * @returns Date string in YYYY-MM-DD format
+ */
+export function formatDateAsYYYYMMDD(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Get date N days ago from now in YYYY-MM-DD format (UTC timezone)
+ * @param daysAgo - Number of days to go back (default: 7)
+ * @returns Date string in YYYY-MM-DD format
+ */
+export function getDateDaysAgo(daysAgo: number = 7): string {
+  const now = new Date();
+  const pastDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+  
+  return formatDateAsYYYYMMDD(pastDate);
+}

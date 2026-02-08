@@ -1,7 +1,7 @@
 import * as functions from "firebase-functions";
 import { firestoreService, YClientsChatMapping, yclientsServiceChain } from "../index";
 import { YRecord } from "../types";
-import { dateStringToTimestamp } from "../utils";
+import { dateStringToTimestamp, getDateDaysAgo } from "../utils";
 
 /**
  * Sync YClients Records to Firebase
@@ -132,6 +132,9 @@ async function fetchAllRecordsForStaff(
   let currentPage = 1;
   const pageSize = 100; // Max records per page
   let hasMorePages = true;
+  const startDate = getDateDaysAgo(7); // Get records from last 7 days
+
+  functions.logger.debug(`Fetching records for staff ${staffId} starting from ${startDate}`);
 
   while (hasMorePages) {
     functions.logger.debug(`Fetching page ${currentPage} for staff ${staffId}`);
@@ -139,6 +142,7 @@ async function fetchAllRecordsForStaff(
     const recordsResponse = await yclientsServiceChain.getRecords({
       staff_id: staffId,
       with_deleted: true,
+      start_date: startDate,
       page: currentPage,
       count: pageSize,
     });

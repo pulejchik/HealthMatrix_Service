@@ -18,7 +18,7 @@ interface ChatSyncStats {
 
 interface RecordInfo {
   title: string | null;
-  date: admin.firestore.Timestamp;
+  date: number; // epochMillis
 }
 
 /**
@@ -79,7 +79,7 @@ function findRecordForChatInfo(records: YClientsRecord[]): RecordInfo | null {
 
     return {
       title: nearest.serviceTitle,
-      date: nearest.datetime,
+      date: nearest.datetime.toMillis(),
     };
   }
 
@@ -90,7 +90,7 @@ function findRecordForChatInfo(records: YClientsRecord[]): RecordInfo | null {
 
   return {
     title: lastRecord.serviceTitle,
-    date: lastRecord.datetime,
+    date: lastRecord.datetime.toMillis(),
   };
 }
 
@@ -190,9 +190,7 @@ async function processYClientsChat(
       const needsUpdate =
         existingChat.status !== status ||
         existingChat.title !== title ||
-        (date && existingChat.date && !existingChat.date.isEqual(date)) ||
-        (!date && existingChat.date) ||
-        (date && !existingChat.date) ||
+        existingChat.date !== date ||
         JSON.stringify(existingChat.users.sort()) !== JSON.stringify(users.sort());
 
       if (needsUpdate) {
