@@ -135,12 +135,12 @@ export const sendConfirmationCode = functions.https.onRequest(async (request, re
 });
 
 /**
- * Authenticate client with YClients using phone number and SMS code
+ * Authenticate client with local password verification
  * 
  * Request body:
  * {
  *   "phoneNumber": "375255045466",
- *   "code": "7009"
+ *   "password": "userPassword123"
  * }
  * 
  * Response (success):
@@ -167,22 +167,125 @@ export const authClient = functions.https.onRequest(async (request, response) =>
 
   try {
     // Validate request body
-    const { phoneNumber, code } = request.body;
+    const { phoneNumber, password } = request.body;
 
-    if (!phoneNumber || !code) {
+    if (!phoneNumber || !password) {
       response.status(400).json({
         success: false,
-        error: "Missing required fields: phoneNumber and code",
+        error: "Missing required fields: phoneNumber and password",
         errorCode: 400,
       });
       return;
     }
 
     // Validate input types
-    if (typeof phoneNumber !== "string" || typeof code !== "string") {
+    if (typeof phoneNumber !== "string" || typeof password !== "string") {
       response.status(400).json({
         success: false,
-        error: "Invalid field types. phoneNumber and code must be strings",
+        error: "Invalid field types. phoneNumber and password must be strings",
+        errorCode: 400,
+      });
+      return;
+    }
+
+    functions.logger.info(`Authenticating client: ${phoneNumber}`);
+    
+    // Find user mapping by phone
+    const userMapping = await firestoreService.getYClientsUserMappingByPhone(phoneNumber);
+
+    if (!userMapping) {
+      functions.logger.error("User mapping not found", { phoneNumber });
+      response.status(401).json({
+        success: false,
+        error: "Authentication failed. Invalid phone number or password.",
+        errorCode: 401,
+      });
+      return;
+    }
+
+    // Verify password
+    if (userMapping.password !== password) {
+      functions.logger.error("Password mismatch", { phoneNumber });
+      response.status(401).json({
+        success: false,
+        error: "Authentication failed. Invalid phone number or password.",
+        errorCode: 401,
+      });
+      return;
+    }
+
+    functions.logger.info("Client authenticated successfully", { 
+      clientId: userMapping.clientId, 
+      phone: phoneNumber 
+    });
+
+    const firebaseToken = await getAuth().createCustomToken(userMapping.clientId.toString(), {
+      phone: phoneNumber,
+      role: 'client',
+    });
+
+    // Return success response (avatar not stored in mapping, return null)
+    response.status(200).json({
+      yclientsId: userMapping.id,
+      userToken: firebaseToken,
+      name: userMapping.name,
+      avatar: null,
+    });
+  } catch (error: any) {
+    handleFunctionError(error, response);
+  }
+});
+
+/**
+ * Create or update client with YClients authentication and password setup
+ * 
+ * Request body:
+ * {
+ *   "phoneNumber": "375255045466",
+ *   "code": "7009",
+ *   "password": "userPassword123"
+ * }
+ * 
+ * Response (success):
+ * {
+ *   "yclientsId": "123456",
+ *   "userToken": "abc123...",
+ *   "name": "John",
+ *   "avatar": "https://..."
+ * }
+ * 
+ * Response (error):
+ * {
+ *   "success": false,
+ *   "error": "Error message",
+ *   "errorCode": 400
+ * }
+ */
+export const createClient = functions.https.onRequest(async (request, response) => {
+  setCorsHeaders(response);
+  
+  if (!validatePostMethod(request, response)) {
+    return;
+  }
+
+  try {
+    // Validate request body
+    const { phoneNumber, code, password } = request.body;
+
+    if (!phoneNumber || !code || !password) {
+      response.status(400).json({
+        success: false,
+        error: "Missing required fields: phoneNumber, code and password",
+        errorCode: 400,
+      });
+      return;
+    }
+
+    // Validate input types
+    if (typeof phoneNumber !== "string" || typeof code !== "string" || typeof password !== "string") {
+      response.status(400).json({
+        success: false,
+        error: "Invalid field types. phoneNumber, code and password must be strings",
         errorCode: 400,
       });
       return;
@@ -192,7 +295,7 @@ export const authClient = functions.https.onRequest(async (request, response) =>
     // You can call yclientsServiceEntity.authenticateUserByCode() to use the entity company
     
     // Authenticate user with YClients
-    functions.logger.info(`Authenticating client: ${phoneNumber}`);
+    functions.logger.info(`Authenticating client for creation: ${phoneNumber}`);
     
     const authResult = await yclientsServiceChain.authenticateUserByCode({
       phone: phoneNumber,
@@ -230,11 +333,12 @@ export const authClient = functions.https.onRequest(async (request, response) =>
         userToken: userToken,
         staffId: null, // Clients are not staff members
         name: name,
+        password: password,
       });
 
       functions.logger.info("User mapping created", { mappingId: userMapping.id });
     } else {
-      // Update existing mapping with latest token
+      // Update existing mapping with latest token and password
       functions.logger.info("Updating existing user mapping", { mappingId: userMapping.id });
       
       userMapping = await firestoreService.updateYClientsUserMapping({
@@ -242,6 +346,7 @@ export const authClient = functions.https.onRequest(async (request, response) =>
         userToken: userToken,
         phone: phoneNumber,
         name: name,
+        password: password,
       });
     }
 
@@ -391,6 +496,7 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
         userToken: userToken,
         staffId: staffId,
         name: name,
+        password: password,
       });
 
       functions.logger.info("User mapping created", { mappingId: userMapping.id });
@@ -404,6 +510,7 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
         phone: login,
         staffId: staffId,
         name: name,
+        password: password,
       });
     }
 

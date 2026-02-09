@@ -33,6 +33,7 @@ export const health = functions.https.onRequest((request, response) => {
 export { 
   sendConfirmationCode, 
   authClient, 
+  createClient,
   authStaff,
   syncYClientsRecordsScheduled,
   syncYClientsChatsToChats,

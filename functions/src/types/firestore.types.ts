@@ -11,6 +11,7 @@ export interface YClientsUserMapping {
   userToken: string;
   staffId: number | null;
   name: string;
+  password: string;
 }
 
 export interface YClientsChatMapping {
