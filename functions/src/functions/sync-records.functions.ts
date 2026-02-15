@@ -145,7 +145,7 @@ async function fetchAllRecordsForStaff(
 
     const recordsResponse = await yclientsServiceChain.getRecords({
       staff_id: staffId,
-      with_deleted: true,
+      with_deleted: 1,
       start_date: startDate,
       page: currentPage,
       count: pageSize,
@@ -259,11 +259,11 @@ async function processStaffRecords(
 }
 
 /**
- * Scheduled function that syncs YClients records every 5 minute
+ * Scheduled function that syncs YClients records every 3 minute
  * Fetches all staff members and their records, then creates/updates chats and records
  */
 export const syncYClientsRecordsScheduled = functions.pubsub
-  .schedule("every 5 minutes")
+  .schedule("every 3 minutes")
   .timeZone("UTC")
   .onRun(async (context) => {
     functions.logger.info("Starting scheduled YClients records sync");

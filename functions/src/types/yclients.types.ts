@@ -299,7 +299,7 @@ export interface RecordListParams {
   changed_before?: string;
   include_consumables?: number;
   include_finance_transactions?: number;
-  with_deleted?: boolean;
+  with_deleted?: number;
 }
 
 export interface RecordListResponse {
