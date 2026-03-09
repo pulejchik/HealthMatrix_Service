@@ -1,9 +1,12 @@
 import * as functions from "firebase-functions";
+import * as bcrypt from "bcrypt";
 import {
   yclientsServiceChain,
   firestoreService, getAuth
 } from "../index";
 import { fetchAllStaffFromBothServices } from "../utils";
+
+const BCRYPT_SALT_ROUNDS = 10;
 
 /**
  * Helper to set CORS headers and handle OPTIONS requests
@@ -205,7 +208,8 @@ export const authClient = functions.https.onRequest(async (request, response) =>
     }
 
     // Verify password
-    if (userMapping.password !== password) {
+    const passwordMatch = await bcrypt.compare(password, userMapping.password);
+    if (!passwordMatch) {
       functions.logger.error("Password mismatch", { phoneNumber });
       response.status(401).json({
         success: false,
@@ -321,6 +325,8 @@ export const createClient = functions.https.onRequest(async (request, response) 
 
     functions.logger.info("Client authenticated successfully", { clientId, phone: phoneNumber });
 
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+
     // Check if user mapping already exists
     let userMapping = await firestoreService.getYClientsUserMappingByClientId(clientId);
 
@@ -334,7 +340,7 @@ export const createClient = functions.https.onRequest(async (request, response) 
         userToken: userToken,
         staffId: null, // Clients are not staff members
         name: name,
-        password: password,
+        password: hashedPassword,
       });
 
       functions.logger.info("User mapping created", { mappingId: userMapping.id });
@@ -347,7 +353,7 @@ export const createClient = functions.https.onRequest(async (request, response) 
         userToken: userToken,
         phone: phoneNumber,
         name: name,
-        password: password,
+        password: hashedPassword,
       });
     }
 
@@ -485,6 +491,8 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
 
     functions.logger.info("Staff member found in staff list", { staffId, userId });
 
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+
     // Check if user mapping already exists
     let userMapping = await firestoreService.getYClientsUserMappingByClientId(userId);
 
@@ -498,7 +506,7 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
         userToken: userToken,
         staffId: staffId,
         name: name,
-        password: password,
+        password: hashedPassword,
       });
 
       functions.logger.info("User mapping created", { mappingId: userMapping.id });
@@ -512,7 +520,7 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
         phone: login,
         staffId: staffId,
         name: name,
-        password: password,
+        password: hashedPassword,
       });
     }
 
