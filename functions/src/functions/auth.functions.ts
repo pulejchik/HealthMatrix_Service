@@ -3,6 +3,7 @@ import {
   yclientsServiceChain,
   firestoreService, getAuth
 } from "../index";
+import { fetchAllStaffFromBothServices } from "../utils";
 
 /**
  * Helper to set CORS headers and handle OPTIONS requests
@@ -449,12 +450,13 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
 
     functions.logger.info("Staff authenticated successfully", { userId, login });
 
-    // Load staff list to find staffId (using default user token from service)
+    // Load staff list from both services to find staffId
     functions.logger.info("Loading staff list to find staff record");
-    const staffListResult = await yclientsServiceChain.getStaffList();
-
-    if (!staffListResult.success || !staffListResult.data) {
-      functions.logger.error("Failed to load staff list", { staffListResult });
+    let allStaff;
+    try {
+      allStaff = await fetchAllStaffFromBothServices();
+    } catch {
+      functions.logger.error("Failed to load staff list from both services");
       response.status(500).json({
         success: false,
         error: "Failed to load staff information",
@@ -464,7 +466,7 @@ export const authStaff = functions.https.onRequest(async (request, response) => 
     }
 
     // Find staff member by user_id or phone
-    const staffMember = staffListResult.data.find(staff => 
+    const staffMember = allStaff.find(staff =>
       staff.user_id === userId || staff.user?.phone === login
     );
 

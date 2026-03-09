@@ -1,7 +1,8 @@
 import * as functions from "firebase-functions";
-import { firestoreService, YClientsChatMapping, yclientsServiceChain } from "../index";
+import { firestoreService, YClientsChatMapping, yclientsServiceChain, yclientsServiceEntity } from "../index";
+import { YClientsService } from "../services/yclients.service";
 import { YRecord } from "../types";
-import { dateStringToTimestamp, getDateDaysAgo } from "../utils";
+import { dateStringToTimestamp, fetchAllStaffFromBothServices, getDateDaysAgo } from "../utils";
 
 /**
  * Sync YClients Records to Firebase
@@ -127,9 +128,10 @@ async function syncRecordToChat(
 }
 
 /**
- * Fetch all records for a staff member with pagination
+ * Fetch all records for a staff member from a single YClients service with pagination
  */
 async function fetchAllRecordsForStaff(
+  yclientsService: YClientsService,
   staffId: number
 ): Promise<YRecord[]> {
   const allRecords: YRecord[] = [];
@@ -143,7 +145,7 @@ async function fetchAllRecordsForStaff(
   while (hasMorePages) {
     functions.logger.debug(`Fetching page ${currentPage} for staff ${staffId}`);
 
-    const recordsResponse = await yclientsServiceChain.getRecords({
+    const recordsResponse = await yclientsService.getRecords({
       staff_id: staffId,
       with_deleted: 1,
       start_date: startDate,
@@ -165,7 +167,6 @@ async function fetchAllRecordsForStaff(
 
     functions.logger.debug(`Fetched ${pageRecords.length} records from page ${currentPage}`);
 
-    // Check if there are more pages
     const totalCount = recordsResponse.meta?.total_count || 0;
     const fetchedSoFar = currentPage * pageSize;
     hasMorePages = fetchedSoFar < totalCount;
@@ -174,6 +175,47 @@ async function fetchAllRecordsForStaff(
   }
 
   return allRecords;
+}
+
+/**
+ * Fetch all records for a staff member from both yclientsServiceEntity and yclientsServiceChain,
+ * merging and deduplicating by record ID
+ */
+async function fetchAllRecordsForStaffFromBothServices(
+  staffId: number
+): Promise<YRecord[]> {
+  const [entityRecords, chainRecords] = await Promise.allSettled([
+    fetchAllRecordsForStaff(yclientsServiceEntity, staffId),
+    fetchAllRecordsForStaff(yclientsServiceChain, staffId),
+  ]);
+
+  const recordsById = new Map<number, YRecord>();
+
+  if (entityRecords.status === "fulfilled") {
+    for (const record of entityRecords.value) {
+      recordsById.set(record.id, record);
+    }
+  } else {
+    functions.logger.warn(`Failed to fetch records from entity service for staff ${staffId}`, {
+      error: entityRecords.reason?.message,
+    });
+  }
+
+  if (chainRecords.status === "fulfilled") {
+    for (const record of chainRecords.value) {
+      recordsById.set(record.id, record);
+    }
+  } else {
+    functions.logger.warn(`Failed to fetch records from chain service for staff ${staffId}`, {
+      error: chainRecords.reason?.message,
+    });
+  }
+
+  if (entityRecords.status === "rejected" && chainRecords.status === "rejected") {
+    throw new Error(`Failed to fetch records for staff ${staffId} from both services`);
+  }
+
+  return Array.from(recordsById.values());
 }
 
 /**
@@ -187,8 +229,8 @@ async function processStaffRecords(
   functions.logger.info("Processing records for staff", { staffId });
 
   try {
-    // Fetch all records for this staff member with pagination
-    const records = await fetchAllRecordsForStaff(staffId);
+    // Fetch all records for this staff member from both services
+    const records = await fetchAllRecordsForStaffFromBothServices(staffId);
     functions.logger.info(`Found ${records.length} total records for staff ${staffId}`);
 
     // Group records by client
@@ -278,15 +320,8 @@ export const syncYClientsRecordsScheduled = functions.pubsub
     };
 
     try {
-      // Fetch all staff members
-      const staffResponse = await yclientsServiceChain.getStaffList();
-
-      if (!staffResponse.success || !staffResponse.data) {
-        functions.logger.error("Failed to fetch staff list", { response: staffResponse });
-        return;
-      }
-
-      const allStaff = staffResponse.data;
+      // Fetch all staff members from both services
+      const allStaff = await fetchAllStaffFromBothServices();
       functions.logger.info(`Found ${allStaff.length} staff members`);
 
       // Process each staff member
