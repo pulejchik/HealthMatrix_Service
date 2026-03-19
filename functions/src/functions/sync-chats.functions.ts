@@ -252,12 +252,16 @@ async function processYClientsChat(
   }
 }
 
+const CHAT_SYNC_CONCURRENCY = 10;
+
 /**
  * Scheduled function that syncs YClients chat mappings to /chats collection
- * Runs every 5 minute
+ * Runs every 7 minutes
  */
-export const syncYClientsChatsToChats = functions.pubsub
-  .schedule("every 5 minutes")
+export const syncYClientsChatsToChats = functions
+  .runWith({ timeoutSeconds: 420 })
+  .pubsub
+  .schedule("every 7 minutes")
   .timeZone("UTC")
   .onRun(async (context) => {
     functions.logger.info("Starting scheduled YClients chats to chats sync");
@@ -274,9 +278,10 @@ export const syncYClientsChatsToChats = functions.pubsub
       const allChatMappings = await firestoreService.getAllYClientsChatMappings();
       functions.logger.info(`Found ${allChatMappings.length} YClients chat mappings`);
 
-      // Process each chat mapping
-      for (const chatMapping of allChatMappings) {
-        await processYClientsChat(chatMapping, stats);
+      // Process chat mappings in parallel batches
+      for (let i = 0; i < allChatMappings.length; i += CHAT_SYNC_CONCURRENCY) {
+        const batch = allChatMappings.slice(i, i + CHAT_SYNC_CONCURRENCY);
+        await Promise.all(batch.map((chatMapping) => processYClientsChat(chatMapping, stats)));
       }
 
       functions.logger.info("YClients chats to chats sync completed", stats);

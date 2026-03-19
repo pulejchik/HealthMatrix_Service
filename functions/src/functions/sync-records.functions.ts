@@ -300,12 +300,16 @@ async function processStaffRecords(
   }
 }
 
+const RECORDS_SYNC_CONCURRENCY = 10;
+
 /**
- * Scheduled function that syncs YClients records every 3 minute
+ * Scheduled function that syncs YClients records every 5 minutes
  * Fetches all staff members and their records, then creates/updates chats and records
  */
-export const syncYClientsRecordsScheduled = functions.pubsub
-  .schedule("every 3 minutes")
+export const syncYClientsRecordsScheduled = functions
+  .runWith({ timeoutSeconds: 300 })
+  .pubsub
+  .schedule("every 5 minutes")
   .timeZone("UTC")
   .onRun(async (context) => {
     functions.logger.info("Starting scheduled YClients records sync");
@@ -324,19 +328,24 @@ export const syncYClientsRecordsScheduled = functions.pubsub
       const allStaff = await fetchAllStaffFromBothServices();
       functions.logger.info(`Found ${allStaff.length} staff members`);
 
-      // Process each staff member
-      for (const staff of allStaff) {
-        // Skip fired or deleted staff
+      // Filter out fired/deleted staff upfront
+      const activeStaff = allStaff.filter((staff) => {
         if (staff.is_fired || staff.is_deleted) {
           functions.logger.debug("Skipping fired/deleted staff", {
             staffId: staff.id,
-            name: staff.name
+            name: staff.name,
           });
-          continue;
+          return false;
         }
+        return true;
+      });
 
-        const staffPhone = staff.user?.phone;
-        await processStaffRecords(staff.id, staffPhone, stats);
+      // Process staff members in parallel batches
+      for (let i = 0; i < activeStaff.length; i += RECORDS_SYNC_CONCURRENCY) {
+        const batch = activeStaff.slice(i, i + RECORDS_SYNC_CONCURRENCY);
+        await Promise.all(
+          batch.map((staff) => processStaffRecords(staff.id, staff.user?.phone, stats))
+        );
       }
 
       functions.logger.info("Scheduled YClients sync completed", stats);
