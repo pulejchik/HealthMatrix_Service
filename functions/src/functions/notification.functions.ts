@@ -21,7 +21,7 @@ const notificationService = createNotificationService();
  *    - Moves notification to /notifications/references/sent (with status "sent" or "failed")
  *    - Removes notification from /notifications/references/pending
  */
-export const processPendingNotifications = functions.pubsub
+export const processPendingNotifications = functions.region('europe-central2').pubsub
   .schedule("every 1 minutes")
   .onRun(async (context) => {
     functions.logger.info("Starting processPendingNotifications");
